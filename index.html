@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Youtube Sync</title>
+    <!-- Bootstrap -->
+    <!-- Latest compiled and minified CSS -->
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+      integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+      crossorigin="anonymous"
+    />
+    <style>
+      .navbar {
+        margin-bottom: 0;
+        border-radius: 0;
+      }
+      .navcontainer {
+        padding: 0 0 0 0;
+        margin-left: 6.5%;
+      }
+      .myContainer {
+        margin: auto;
+        width: 85%;
+        height: 84vh;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+
+    <nav class="navbar">
+      <div class="navcontainer">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <a href="#" style="float: left;">
+          <img
+            src="https://www.freepnglogos.com/uploads/youtube-logo-hd-8.png"
+            height="50"
+            width="65"
+          />
+        </a>
+        <a
+          class="navbar-brand"
+          href="#"
+          style="padding: 15px 15px 15px 0px; font-weight: bold;"
+          >Syncer</a
+        >
+      </div>
+    </nav>
+
+    <div class="myContainer">
+      <div id="video-placeholder" style="width: 100%; height: 100%"></div>
+
+      <div id="playerControls">
+        <div id="progressBar" style="width: 100%; height: 35px; float: left;">
+          <div
+            id="line"
+            style="border-style: solid; top: 50%; position: relative; border-width: 1.2px;"
+          ></div>
+          <div
+            id="square"
+            style="height: 15px; width: 15px; position: relative; border-width: 2px; border-style: solid; top: 8.5px; left: 0%"
+          ></div>
+        </div>
+        <div class="btn-group" style="float: left;">
+          <button
+            type="button"
+            id="play"
+            class="btn btn-xs btn-success"
+            aria-label="Left Align"
+          >
+            <span class="glyphicon glyphicon-play" aria-hidden="true"></span>
+          </button>
+          <button
+            type="button"
+            id="pause"
+            class="btn btn-xs btn-danger"
+            aria-label="Left Align"
+            style="margin-left: 5px;"
+          >
+            <span class="glyphicon glyphicon-pause" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      $(document).ready(function() {
+        $("#play").on("click", function() {
+          player.playVideo();
+        });
+
+        $("#pause").on("click", function() {
+          player.pauseVideo();
+        });
+
+        $("#mute-toggle").on("click", function() {
+          var mute_toggle = $(this);
+
+          if (player.isMuted()) {
+            player.unMute();
+            mute_toggle.text("volume_up");
+          } else {
+            player.mute();
+            mute_toggle.text("volume_off");
+          }
+        });
+
+        $("#volume-input").on("change", function() {
+          player.setVolume($(this).val());
+        });
+
+        $("#speed").on("change", function() {
+          player.setPlaybackRate($(this).val());
+        });
+
+        $("#quality").on("change", function() {
+          player.setPlaybackQuality($(this).val());
+        });
+
+        $("#next").on("click", function() {
+          player.nextVideo();
+        });
+
+        $("#prev").on("click", function() {
+          player.previousVideo();
+        });
+      });
+      function progressBarLoop() {
+        var progressBar = $("#progressBar");
+        var progressSquare = $("#square");
+        var videoLength = player.getDuration();
+        progressBar.click(function(event) {
+          //send seek request
+          var divOffset = $(this).offset();
+          var widthInPixels = document.getElementById("progressBar")
+            .clientWidth;
+          var seekTo =
+            ((event.pageX - divOffset.left) / widthInPixels) * videoLength;
+          socket.emit("progressEvent", seekTo);
+          player.seekTo(seekTo);
+        });
+        setInterval(function() {
+          if (player === null || progressBar === null) {
+            return;
+          }
+          if (player.getPlayerState() === 3) {
+            socket.emit("buffering", true);
+          }
+          socket.on("buffering", function(message) {
+            if (message) {
+              player.pauseVideo();
+            }
+          });
+          var fraction = (player.getCurrentTime() / player.getDuration()) * 100;
+          progressSquare.css("left", fraction.toString() + "%");
+        }, 200);
+      }
+
+      // Just to load API data
+      var tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      var firstScriptTag = document.getElementsByTagName("script")[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+      // Real Stuff from here
+      var player;
+      var id = prompt("Enter the video ID");
+      if (id === "") {
+        id = prompt("Enter the video ID");
+      }
+
+      function onYouTubeIframeAPIReady() {
+        player = new YT.Player("video-placeholder", {
+          width: 1250,
+          height: 650,
+          videoId: id,
+          playerVars: {
+            color: "white",
+            playlist: "taJ60kskkns,FG0fTKAqZ5g"
+          },
+          events: {
+            onReady: initialize
+          },
+          playerVars: {
+            controls: 0,
+            disablekb: 1,
+            modestbranding: 1,
+            rel: 0,
+            showinfo: 0
+          }
+        });
+      }
+
+      function initialize(event) {
+        event.target.playVideo();
+        progressBarLoop();
+      }
+    </script>
+
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script
+      src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+      integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+      crossorigin="anonymous"
+    ></script>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      var socket = io();
+      socket.on("progressEvent", function(message) {
+        player.seekTo(message);
+      });
+      socket.on("playerEvent", function(message) {
+        if (message === "play") {
+          player.playVideo();
+        } else if (message === "pause") {
+          player.pauseVideo();
+        }
+      });
+      var playButton = $("#play");
+      var pauseButton = $("#pause");
+      var progressBar = $("#progressBar");
+      playButton.click(function() {
+        socket.emit("playerEvent", "play");
+      });
+      pauseButton.click(function() {
+        socket.emit("playerEvent", "pause");
+      });
+    </script>
+  </body>
+</html>
