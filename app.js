@@ -3,6 +3,7 @@ const path = require("path");
 const app = express();
 const http = require("http").Server(app);
 const io = require("socket.io")(http);
+const PORT = process.env.PORT || 5000;
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname + "/index.html"));
@@ -24,4 +25,4 @@ io.on("connection", socket => {
   console.log(`A user connected...`);
 });
 
-http.listen(5000, () => "Server started...");
+http.listen(PORT, () => "Server started...");
